@@ -1,0 +1,14 @@
+## Interface: 40000
+## Author: Quil
+## Title: ArchDB
+## Notes: Archaeology List
+## Version: 1.0
+## SavedVariables: ArchDBDB
+## OptionalDeps: Ace3
+## X-Embeds: Ace3
+
+#@no-lib-strip@
+embeds.xml
+#@end-no-lib-strip@
+ArchDB.lua
+Artifacts.lua
