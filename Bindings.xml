@@ -1,0 +1,5 @@
+<Bindings>	
+	<Binding name="ARCHDBOPEN" header="ARCHDB">
+		ArchDB:BuildWindow()
+	</Binding>
+</Bindings>

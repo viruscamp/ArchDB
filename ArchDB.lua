@@ -7,6 +7,9 @@ local ADB = ArchDB.ADB;
 
 local appName = ...
 
+BINDING_HEADER_ARCHDB = "ArchDB"
+BINDING_NAME_ARCHDBOPEN = "Open ArchDB"
+
 ADB.DEBUG_MODE = false
 ADB.VERSION = GetAddOnMetadata(appName, "Version");
 ADB.IconFormat = "|T%s:20:20|t";
@@ -29,11 +32,14 @@ ADB.ItemColors = {
 local defaults = {
 	profile = {
 		Scale = 1,
+		Height = nil,
+		Width = nil,
+		Points = nil;
 	},
 	char = {
 		LastVersion = ADB.VERSION,
-		LastSelected = 1;
-		ShowAll = true;
+		LastSelected = 1,
+		ShowAll = true,
 	},
 }
 
@@ -74,6 +80,13 @@ function ArchDB:AddArtifact(frame, info)
 		GameTooltip:Show() end);
 	label:SetCallback("OnLeave", function () ShowUIPanel(GameTooltip)
 		GameTooltip:Hide() end);
+	label:SetUserData("link", itemLink);
+	label:SetCallback("OnClick", function (lbl) 
+		if(IsShiftKeyDown() and ChatEdit_GetLastActiveWindow():IsVisible()) then
+			ChatEdit_InsertLink(lbl:GetUserData("link"));
+		end
+
+	end);
 
 	frame:AddChild(label);
 
@@ -238,7 +251,23 @@ function ADB.SetGroupTitle()
 	ADB.Group:SetTitle(title);
 end
 
+function ArchDB.HeightChange(widget, amt)
+	ADB.db.profile.Height = amt;
+end
+
+function ArchDB.WidthChange(widget, amt)
+	ADB.db.profile.Width = amt;
+	ADB.Debug("Width: "..amt);
+end
+
 function ArchDB:BuildWindow()
+	local width = ADB.db.profile.Width;
+	local height = ADB.db.profile.Height;
+	if ADB.Scroll ~= nil then 
+		-- Already open
+		return;
+	end
+
 	if ArchDB:BuildData() == false then
 		ArchDB:ScheduleTimer("BuildWindow", 0.1);
 		return;
@@ -247,7 +276,35 @@ function ArchDB:BuildWindow()
 	local frame = AceGUI:Create("Frame")
 	frame:SetTitle("ArchDB")
 	frame:SetStatusText("Archaeology Database");
-	frame:SetCallback("OnClose", function(widget) ADB.Scroll = nil; AceGUI:Release(widget) end)
+	frame:SetCallback("OnClose", function(widget) 
+		ADB.frame = nil;
+		if ADB.db.profile.Points == nil then 
+			ADB.db.profile.Points = {} 
+		else
+			table.wipe(ADB.db.profile.Points);
+		end
+		for i=1,frame:GetNumPoints() do
+--			local point, relativeTo, relativePoint, xOfs, yOfs = MyRegion:GetPoint(i)
+			table.insert(ADB.db.profile.Points, i, {frame:GetPoint(i)});
+		end
+		ADB.Scroll = nil; 
+		AceGUI:Release(widget) 
+	end)
+	if height ~= nil then
+		frame:SetHeight(height);
+	end
+	if width ~= nil then
+		ADB.Debug("Set Width to "..width);
+		frame:SetWidth(width);
+	end
+	frame.OnHeightSet = ArchDB.HeightChange;
+	frame.OnWidthSet = ArchDB.WidthChange;
+	if ADB.db.profile.Points ~= nil then
+		local point;
+		for _, point in pairs(ADB.db.profile.Points) do
+			frame:SetPoint(point[1], nil, point[3], point[4], point[5]);
+		end
+	end
 	frame:SetLayout("Fill")
 
 	ADB.Group = AceGUI:Create("DropdownGroup")
@@ -267,10 +324,20 @@ function ArchDB:BuildWindow()
 	_G["ArchDBFrame"] = frame;
 	tinsert(UISpecialFrames, "ArchDBFrame");
 	frame:Show();
+	ADB.frame = frame;
 end
 
 function ArchDB:ChatCmd(args)
-	ArchDB:BuildWindow();
+	if args == "reset" then
+		if ADB.frame ~= nil then
+			ADB.frame:Hide();
+		end
+		ADB.db.profile.Height = nil;
+		ADB.db.profile.Width = nil;
+		ADB.db.profile.Points = nil;
+	else
+		ArchDB:BuildWindow();
+	end
 end
 
 function ArchDB:OnInitialize()
