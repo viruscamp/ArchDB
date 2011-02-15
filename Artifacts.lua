@@ -194,8 +194,6 @@ function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 		ADB_Dwarf(raceIndex);
 	elseif raceName == "Draenei" then
 		ADB_Draenei(raceIndex);
-	elseif raceName == "Draenei" then
-		ADB_Draenei(raceIndex);
 	elseif raceName == "Fossil" then
 		ADB_Fossil(raceIndex);
 	elseif raceName == "Night Elf" then
@@ -209,6 +207,24 @@ function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 	elseif raceName == "Troll" then
 		ADB_Troll(raceIndex);
 	elseif raceName == "Vrykul" then
+		ADB_Vrykul(raceIndex);
+	elseif raceIndex == 1 then
+		ADB_Dwarf(raceIndex);
+	elseif raceIndex == 2 then
+		ADB_Draenei(raceIndex);
+	elseif raceIndex == 3 then
+		ADB_Fossil(raceIndex);
+	elseif raceIndex == 4 then
+		ADB_NightElf(raceIndex);
+	elseif raceIndex == 5 then
+		ADB_Nerubian(raceIndex);
+	elseif raceIndex == 6 then
+		ADB_Orc(raceIndex);
+	elseif raceIndex == 7 then
+		ADB_Tolvir(raceIndex);
+	elseif raceIndex == 8 then
+		ADB_Troll(raceIndex);
+	elseif raceIndex == 9 then
 		ADB_Vrykul(raceIndex);
 	end
 end

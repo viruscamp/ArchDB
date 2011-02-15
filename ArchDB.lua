@@ -106,6 +106,7 @@ function ADB.GetArtifactCounts(raceIndex)
 	ADB.ArtifactCnt = 0;
 
 	local artifactCount = GetNumArtifactsByRace(raceIndex);
+	if artifactCount == nil then return end
 
 	for artifactIndex=1, artifactCount do
 		local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(raceIndex, artifactIndex);
@@ -198,6 +199,10 @@ function ArchDB:BuildArtifacts(raceIndex)
 
 	ADB.ArtifactList[raceIndex] = {};
 
+	if ArchDB_ArtifactList[raceIndex] == nil then
+		return ret;
+	end
+
 	for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
 		local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
 		if itemName == nil then 
@@ -220,7 +225,7 @@ function ArchDB:BuildData()
 
 	ADB.Races = {};
 	for raceIndex=1, raceCount do
-		local raceName, raceCurrency, raceTexture, raceItemID = GetArchaeologyRaceInfo(raceIndex);
+		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
 		if raceName == nil then 
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
