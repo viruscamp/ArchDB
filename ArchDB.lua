@@ -19,6 +19,8 @@ ADB.ArtifactList = {};
 ADB.ArtifactCnt = 0
 ADB.Scroll = nil
 
+ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V"};
+
 ADB.ItemColors = {
 	"ff9d9d9d", -- gray (crappy) 
 	"ffffffff", -- white (normal)
@@ -70,14 +72,25 @@ function ArchDB:AddArtifact(frame, info)
 	local itemRarity = info[3];
 	local icon = info[4];
 	local completed = info[5];
+	local race = info[6];
+	local completedstr = "";
+	local racestr = "";
+
+	if ADB.db.char.ShowAll == true then
+		completedstr = " ("..completed..")";
+	end
+	if race ~= nil then
+		racestr = " ("..race..")";
+	end
 
 	local label = AceGUI:Create("InteractiveLabel");
-	label:SetText(string.format(ADB.IconFormat, icon).."|c"..ADB.ItemColors[itemRarity+1]..itemName.." ("..completed..")|r");
+	label:SetText(string.format(ADB.IconFormat, icon).."|c"..ADB.ItemColors[itemRarity+1]..itemName..completedstr..racestr.."|r");
 	label:SetWidth(210);
 	label:SetCallback("OnEnter", function () ShowUIPanel(GameTooltip)
+		if IsControlKeyDown() == nil then
 		GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
 		GameTooltip:SetHyperlink(itemLink);
-		GameTooltip:Show() end);
+		GameTooltip:Show() end end);
 	label:SetCallback("OnLeave", function () ShowUIPanel(GameTooltip)
 		GameTooltip:Hide() end);
 	label:SetUserData("link", itemLink);
@@ -103,18 +116,28 @@ end
 
 function ADB.GetArtifactCounts(raceIndex)
 	local artifactIndex;
+	local startRace = raceIndex;
+	local endRace = raceIndex;
 	ADB.ArtifactCnt = 0;
 
-	local artifactCount = GetNumArtifactsByRace(raceIndex);
-	if artifactCount == nil then return end
+	if raceIndex == GetNumArchaeologyRaces() + 1 then
+		startRace = 1;
+		endRace = raceIndex - 1;
+	end
 
-	for artifactIndex=1, artifactCount do
-		local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(raceIndex, artifactIndex);
-		if artifactName == "Mummified Monkey Paw" then
-			artifactName = "Crawling Claw"
+	ADB.Debug("Start to end: "..startRace..", "..endRace);
+	for startRace = startRace, endRace do
+		local artifactCount = GetNumArtifactsByRace(startRace);
+		if artifactCount == nil then return end
+
+		for artifactIndex=1, artifactCount do
+			local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(startRace, artifactIndex);
+			if artifactName == "Mummified Monkey Paw" then
+				artifactName = "Crawling Claw"
+			end
+			ADB.AddCount(raceIndex, artifactName, completionCount);
+			ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
 		end
-		ADB.AddCount(raceIndex, artifactName, completionCount);
-		ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
 	end
 end
 
@@ -199,19 +222,35 @@ end
 function ArchDB:BuildArtifacts(raceIndex)
 	local itemid;
 	local ret = true;
+	local startRace = raceIndex;
+	local endRace = raceIndex;
+	local allRaces = false;
+	local raceName = nil;
 
 	ADB.ArtifactList[raceIndex] = {};
 
-	if ArchDB_ArtifactList[raceIndex] == nil then
-		return ret;
+	if raceIndex == GetNumArchaeologyRaces() + 1 then
+		startRace = 1;
+		endRace = raceIndex - 1;
+		allRaces = true;
+		ADB.Debug("ALL");
+	else
+		ADB.Debug("Not ALL");
 	end
-
-	for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
-		local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
-		if itemName == nil then 
-			ret = false;
-		else
-			table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0 }); 
+	
+	for startRace = startRace, endRace do
+		if allRaces == true then
+			raceName = ADB.ShortRace[startRace];
+		end
+		if ArchDB_ArtifactList[startRace] ~= nil then
+			for _, itemid in pairs(ArchDB_ArtifactList[startRace]) do
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
+				if itemName == nil then 
+					ret = false;
+				else
+					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName }); 
+				end
+			end
 		end
 	end
 
@@ -221,21 +260,27 @@ end
 function ArchDB:BuildData()
 	if ADB.DataBuilt ~= nil then return true end
 
-	local raceCount = GetNumArchaeologyRaces()
+	local raceCount = GetNumArchaeologyRaces() + 1; -- Add for All Races
 	local raceIndex;
 
 	local ret = true;
 
 	ADB.Races = {};
+
 	for raceIndex=1, raceCount do
 		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
+		if raceIndex == raceCount then
+			raceName = "All Races";
+		end
 		if raceName == nil then 
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
 		end
 		if raceName ~= nil and raceName ~= "Other" then 
 			tinsert(ADB.Races, raceIndex, raceName);
-			ArchDB_ArtifactList_Setup(raceIndex, raceName);
+			if raceIndex < raceCount then -- Not All Races
+				ArchDB_ArtifactList_Setup(raceIndex, raceName);
+			end
 			if ArchDB:BuildArtifacts(raceIndex) == false then
 				ret = false;
 			else
