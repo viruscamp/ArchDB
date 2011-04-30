@@ -110,6 +110,9 @@ function ADB.GetArtifactCounts(raceIndex)
 
 	for artifactIndex=1, artifactCount do
 		local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(raceIndex, artifactIndex);
+		if artifactName == "Mummified Monkey Paw" then
+			artifactName = "Crawling Claw"
+		end
 		ADB.AddCount(raceIndex, artifactName, completionCount);
 		ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
 	end

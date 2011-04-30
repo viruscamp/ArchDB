@@ -1,7 +1,5 @@
 ArchDB_ArtifactList = {};
 
-
-
 local function ADB_Dwarf(raceIndex)
 ArchDB_ArtifactList[raceIndex] = { 
 64373, -- 'Chalice of the Mountain Kings'
@@ -57,8 +55,12 @@ end
 
 local function ADB_Fossil(raceIndex)
 ArchDB_ArtifactList[raceIndex] = { 
+69764, -- 'Extinct Turtle Shell'
+
+69776, -- 'Ancient Amber'
 60955, -- 'Fossilized Hatchling'
 60954, -- 'Fossilized Raptor'
+69821, -- 'Pterrordax Hatchling'
 
 64355, -- 'Ancient Shark Jaws'
 63121, -- 'Beautiful Preserved Fern'
@@ -160,6 +162,9 @@ local function ADB_Troll(raceIndex)
 ArchDB_ArtifactList[raceIndex] = { 
 64377, -- 'Zin\'rokh, Destroyer of Worlds'
 
+69777, -- 'Haunted War Drum'
+69824, -- 'Voodoo Figurine'
+
 64348, -- 'Atal\'ai Scepter'
 64346, -- 'Bracelet of Jade and Coins'
 63524, -- 'Cinnabar Bijou'
@@ -180,6 +185,8 @@ end
 local function ADB_Vrykul(raceIndex)
 ArchDB_ArtifactList[raceIndex] = { 
 64460, -- 'Nifflevar Bearded Axe'
+
+69775, -- 'Vrykul Drinking Horn'
 
 64464, -- 'Fanged Cloak Pin'
 64462, -- 'Flint Striker'
