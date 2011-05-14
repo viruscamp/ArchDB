@@ -1,0 +1,13 @@
+------------------------------------------------------------------------
+r19 | rabbit | 2011-05-05 13:55:11 +0000 (Thu, 05 May 2011) | 1 line
+Changed paths:
+   M /trunk/LibDBIcon-1.0/LibDBIcon-1.0.lua
+
+Update the GetMinimapShape values courtesy of ethancentaurai in bug 14.
+------------------------------------------------------------------------
+r18 | rabbit | 2010-11-16 21:57:16 +0000 (Tue, 16 Nov 2010) | 1 line
+Changed paths:
+   M /trunk/LibDBIcon-1.0/LibDBIcon-1.0.lua
+
+Fix invoking :Refresh without passing in the db.
+------------------------------------------------------------------------

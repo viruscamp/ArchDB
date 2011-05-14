@@ -2,7 +2,7 @@
 ## Author: Quil
 ## Title: ArchDB
 ## Notes: Archaeology List
-## Version: 1.4
+## Version: 1.5
 ## SavedVariables: ArchDBDB
 ## OptionalDeps: Ace3
 ## X-Embeds: Ace3

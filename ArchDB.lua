@@ -2,6 +2,9 @@ ArchDB = LibStub("AceAddon-3.0"):NewAddon("ArchDB", "AceEvent-3.0", "AceTimer-3.
 
 local AceGUI = LibStub("AceGUI-3.0");
 
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1", true);
+local LibIcon = LibStub("LibDBIcon-1.0", true)
+
 ArchDB.ADB = {};
 local ADB = ArchDB.ADB;
 
@@ -43,6 +46,9 @@ local defaults = {
 		LastSelected = 1,
 		ShowAll = true,
 	},
+	global = {
+		minimap = { hide = false },
+	}
 }
 
 function ADB.Debug(...)
@@ -388,8 +394,25 @@ function ArchDB:ChatCmd(args)
 		ADB.db.profile.Height = nil;
 		ADB.db.profile.Width = nil;
 		ADB.db.profile.Points = nil;
+	elseif args == "minimap" or args == "map" or args == "icon" then
+		local val = ADB.db.global.minimap.hide;
+		ADB.db.global.minimap.hide = not val;
+		if val then
+			LibIcon:Show(appName);
+		else
+			LibIcon:Hide(appName);
+		end
+	elseif args == "help" then
+		local archdbtxt = "|cff1eff00archdb ";
+		ChatFrame1:AddMessage(archdbtxt..":|r Opens ArchDB", 1.0, 1.0, 1.0);
+		ChatFrame1:AddMessage(archdbtxt.."icon :|r Toggles minimap icon", 1.0, 1.0, 1.0);
+		ChatFrame1:AddMessage(archdbtxt.."reset :|r Resets ArchDB frame", 1.0, 1.0, 1.0);
 	else
-		ArchDB:BuildWindow();
+		if ADB.Scroll == nil then
+			ArchDB:BuildWindow();
+		else
+			ADB.frame:Hide();
+		end
 	end
 end
 
@@ -398,7 +421,38 @@ function ArchDB:OnInitialize()
 --	ADB.db.ResetDB();
 
 	ArchDB:RegisterSlashCommands();
+	
+	if ADB.db.global.minimap == nil then
+		ADB.db.global.minimap = { hide = false };
+	end
+
+	if LDB == nil then 
+		return;
+	end
+
+	ADB.broker = LDB:NewDataObject("ArchDB", {
+		type = "launcher",
+		icon = "Interface\\Icons\\TRADE_Archaeology_fossil_fern",
+		label = "ArchDB",
+		text = "ArchDB",
+		OnClick= function(self, button)
+			if button == "LeftButton" then
+				if ADB.Scroll == nil then
+					ArchDB:BuildWindow();
+				else
+					ADB.frame:Hide();
+				end
+			end
+		end,
+		OnTooltipShow = function(tip)
+			tip:AddLine("ArchDB");
+			tip:AddLine("Click to toggle window");
+		end,
+	});
+
+	LibIcon:Register(appName, ADB.broker, ADB.db.global.minimap);
 end
+
 
 function ArchDB:ArtifactHistoryReady()
 	if ADB.Scroll ~= nil then 
