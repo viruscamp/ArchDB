@@ -2,10 +2,16 @@ ArchDB = LibStub("AceAddon-3.0"):NewAddon("ArchDB", "AceEvent-3.0", "AceTimer-3.
 
 local AceGUI = LibStub("AceGUI-3.0");
 
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1", true);
+local LibIcon = LibStub("LibDBIcon-1.0", true)
+
 ArchDB.ADB = {};
 local ADB = ArchDB.ADB;
 
 local appName = ...
+
+BINDING_HEADER_ARCHDB = "ArchDB"
+BINDING_NAME_ARCHDBOPEN = "Open ArchDB"
 
 ADB.DEBUG_MODE = false
 ADB.VERSION = GetAddOnMetadata(appName, "Version");
@@ -15,6 +21,8 @@ ADB.ArtifactList = {};
 
 ADB.ArtifactCnt = 0
 ADB.Scroll = nil
+
+ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V"};
 
 ADB.ItemColors = {
 	"ff9d9d9d", -- gray (crappy) 
@@ -29,12 +37,18 @@ ADB.ItemColors = {
 local defaults = {
 	profile = {
 		Scale = 1,
+		Height = nil,
+		Width = nil,
+		Points = nil;
 	},
 	char = {
 		LastVersion = ADB.VERSION,
-		LastSelected = 1;
-		ShowAll = true;
+		LastSelected = 1,
+		ShowAll = true,
 	},
+	global = {
+		minimap = { hide = false },
+	}
 }
 
 function ADB.Debug(...)
@@ -64,18 +78,63 @@ function ArchDB:AddArtifact(frame, info)
 	local itemRarity = info[3];
 	local icon = info[4];
 	local completed = info[5];
+	local race = info[6];
+	local completedstr = "";
+	local racestr = "";
+	local numFrament = info[7];
+	local numKeyStone = info[8];
 
+	if ADB.db.char.ShowAll == true then
+		completedstr = " ("..completed..")";
+	end
+	if race ~= nil then
+		racestr = " ("..race..")";
+	end
+	
+	 local fargmentstr = "(F:"..numFrament.." K:"..numKeyStone..")"
+
+	local OnEnter = function ()
+		ShowUIPanel(GameTooltip)
+		if IsControlKeyDown() == nil then
+			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+			GameTooltip:SetHyperlink(itemLink);
+			GameTooltip:Show()
+		end
+	end
+
+	local OnLeave = function ()
+		ShowUIPanel(GameTooltip)
+		GameTooltip:Hide()
+	end
+	
+	local OnClick = function (lbl) 
+		if(IsShiftKeyDown() and ChatEdit_GetLastActiveWindow():IsVisible()) then
+			ChatEdit_InsertLink(lbl:GetUserData("link"));
+		end
+	end
+	
 	local label = AceGUI:Create("InteractiveLabel");
-	label:SetText(string.format(ADB.IconFormat, icon).."|c"..ADB.ItemColors[itemRarity+1]..itemName.." ("..completed..")|r");
-	label:SetWidth(210);
-	label:SetCallback("OnEnter", function () ShowUIPanel(GameTooltip)
-		GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-		GameTooltip:SetHyperlink(itemLink);
-		GameTooltip:Show() end);
-	label:SetCallback("OnLeave", function () ShowUIPanel(GameTooltip)
-		GameTooltip:Hide() end);
+	label:SetText(string.format(ADB.IconFormat, icon));
+	label:SetWidth(30);
+	label:SetCallback("OnEnter", OnEnter);
+	label:SetCallback("OnLeave", OnLeave);
+	label:SetUserData("link", itemLink);
+	label:SetCallback("OnClick", OnClick);
+	
+	local textLabel = AceGUI:Create("InteractiveLabel");
+	textLabel:SetText("|c"..ADB.ItemColors[itemRarity+1]..itemName.."\n"..fargmentstr..completedstr..racestr.."|r");
+	textLabel:SetCallback("OnEnter", OnEnter);
+	textLabel:SetCallback("OnLeave", OnLeave);
+	textLabel:SetUserData("link", itemLink);
+	textLabel:SetCallback("OnClick", OnClick);
+	
+	local group = AceGUI:Create("SimpleGroup");
+	group:SetLayout("Flow");
+	--group:SetWidth(250);
+	group:AddChild(label);
+	group:AddChild(textLabel);
 
-	frame:AddChild(label);
+	frame:AddChild(group);
 
 end
 
@@ -90,14 +149,26 @@ end
 
 function ADB.GetArtifactCounts(raceIndex)
 	local artifactIndex;
+	local startRace = raceIndex;
+	local endRace = raceIndex;
 	ADB.ArtifactCnt = 0;
 
-	local artifactCount = GetNumArtifactsByRace(raceIndex);
+	if raceIndex == GetNumArchaeologyRaces() + 1 then
+		startRace = 1;
+		endRace = raceIndex - 1;
+	end
 
-	for artifactIndex=1, artifactCount do
-		local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(raceIndex, artifactIndex);
-		ADB.AddCount(raceIndex, artifactName, completionCount);
-		ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
+	ADB.Debug("Start to end: "..startRace..", "..endRace);
+	for startRace = startRace, endRace do
+		local artifactCount = GetNumArtifactsByRace(startRace);
+		if artifactCount == nil then return end
+
+		for artifactIndex=1, artifactCount do
+			local artifactName, artifactDescription, artifactRarity, artifactIcon, hoverDescription, keystoneCount, bgTexture, firstCompletionTime, completionCount = GetArtifactInfoByRace(startRace, artifactIndex);
+			artifactName = ArchDB_DifferentNameList[artifactName] or artifactName;
+			ADB.AddCount(raceIndex, artifactName, completionCount);
+			ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
+		end
 	end
 end
 
@@ -182,15 +253,36 @@ end
 function ArchDB:BuildArtifacts(raceIndex)
 	local itemid;
 	local ret = true;
+	local startRace = raceIndex;
+	local endRace = raceIndex;
+	local allRaces = false;
+	local raceName = nil;
 
 	ADB.ArtifactList[raceIndex] = {};
 
-	for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
-		local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
-		if itemName == nil then 
-			ret = false;
-		else
-			table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0 }); 
+	if raceIndex == GetNumArchaeologyRaces() + 1 then
+		startRace = 1;
+		endRace = raceIndex - 1;
+		allRaces = true;
+		ADB.Debug("ALL");
+	else
+		ADB.Debug("Not ALL");
+	end
+	
+	for startRace = startRace, endRace do
+		if allRaces == true then
+			raceName = ADB.ShortRace[startRace];
+		end
+		if ArchDB_ArtifactList[startRace] ~= nil then
+			for _, artifactItem in pairs(ArchDB_ArtifactList[startRace]) do
+				local itemid, numFrament, numKeyStone = artifactItem[1], artifactItem[2], artifactItem[3]
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
+				if itemName == nil then 
+					ret = false;
+				else
+					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName, numFrament, numKeyStone }); 
+				end
+			end
 		end
 	end
 
@@ -200,21 +292,27 @@ end
 function ArchDB:BuildData()
 	if ADB.DataBuilt ~= nil then return true end
 
-	local raceCount = GetNumArchaeologyRaces()
+	local raceCount = GetNumArchaeologyRaces() + 1; -- Add for All Races
 	local raceIndex;
 
 	local ret = true;
 
 	ADB.Races = {};
+
 	for raceIndex=1, raceCount do
-		local raceName, raceCurrency, raceTexture, raceItemID = GetArchaeologyRaceInfo(raceIndex);
+		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
+		if raceIndex == raceCount then
+			raceName = "All Races";
+		end
 		if raceName == nil then 
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
 		end
 		if raceName ~= nil and raceName ~= "Other" then 
 			tinsert(ADB.Races, raceIndex, raceName);
-			ArchDB_ArtifactList_Setup(raceIndex, raceName);
+			if raceIndex < raceCount then -- Not All Races
+				ArchDB_ArtifactList_Setup(raceIndex, raceName);
+			end
 			if ArchDB:BuildArtifacts(raceIndex) == false then
 				ret = false;
 			else
@@ -238,7 +336,23 @@ function ADB.SetGroupTitle()
 	ADB.Group:SetTitle(title);
 end
 
+function ArchDB.HeightChange(widget, amt)
+	ADB.db.profile.Height = amt;
+end
+
+function ArchDB.WidthChange(widget, amt)
+	ADB.db.profile.Width = amt;
+	ADB.Debug("Width: "..amt);
+end
+
 function ArchDB:BuildWindow()
+	local width = ADB.db.profile.Width;
+	local height = ADB.db.profile.Height;
+	if ADB.Scroll ~= nil then 
+		-- Already open
+		return;
+	end
+
 	if ArchDB:BuildData() == false then
 		ArchDB:ScheduleTimer("BuildWindow", 0.1);
 		return;
@@ -247,7 +361,35 @@ function ArchDB:BuildWindow()
 	local frame = AceGUI:Create("Frame")
 	frame:SetTitle("ArchDB")
 	frame:SetStatusText("Archaeology Database");
-	frame:SetCallback("OnClose", function(widget) ADB.Scroll = nil; AceGUI:Release(widget) end)
+	frame:SetCallback("OnClose", function(widget) 
+		ADB.frame = nil;
+		if ADB.db.profile.Points == nil then 
+			ADB.db.profile.Points = {} 
+		else
+			table.wipe(ADB.db.profile.Points);
+		end
+		for i=1,frame:GetNumPoints() do
+--			local point, relativeTo, relativePoint, xOfs, yOfs = MyRegion:GetPoint(i)
+			table.insert(ADB.db.profile.Points, i, {frame:GetPoint(i)});
+		end
+		ADB.Scroll = nil; 
+		AceGUI:Release(widget) 
+	end)
+	if height ~= nil then
+		frame:SetHeight(height);
+	end
+	if width ~= nil then
+		ADB.Debug("Set Width to "..width);
+		frame:SetWidth(width);
+	end
+	frame.OnHeightSet = ArchDB.HeightChange;
+	frame.OnWidthSet = ArchDB.WidthChange;
+	if ADB.db.profile.Points ~= nil then
+		local point;
+		for _, point in pairs(ADB.db.profile.Points) do
+			frame:SetPoint(point[1], nil, point[3], point[4], point[5]);
+		end
+	end
 	frame:SetLayout("Fill")
 
 	ADB.Group = AceGUI:Create("DropdownGroup")
@@ -267,10 +409,37 @@ function ArchDB:BuildWindow()
 	_G["ArchDBFrame"] = frame;
 	tinsert(UISpecialFrames, "ArchDBFrame");
 	frame:Show();
+	ADB.frame = frame;
 end
 
 function ArchDB:ChatCmd(args)
-	ArchDB:BuildWindow();
+	if args == "reset" then
+		if ADB.frame ~= nil then
+			ADB.frame:Hide();
+		end
+		ADB.db.profile.Height = nil;
+		ADB.db.profile.Width = nil;
+		ADB.db.profile.Points = nil;
+	elseif args == "minimap" or args == "map" or args == "icon" then
+		local val = ADB.db.global.minimap.hide;
+		ADB.db.global.minimap.hide = not val;
+		if val then
+			LibIcon:Show(appName);
+		else
+			LibIcon:Hide(appName);
+		end
+	elseif args == "help" then
+		local archdbtxt = "|cff1eff00archdb ";
+		ChatFrame1:AddMessage(archdbtxt..":|r Opens ArchDB", 1.0, 1.0, 1.0);
+		ChatFrame1:AddMessage(archdbtxt.."icon :|r Toggles minimap icon", 1.0, 1.0, 1.0);
+		ChatFrame1:AddMessage(archdbtxt.."reset :|r Resets ArchDB frame", 1.0, 1.0, 1.0);
+	else
+		if ADB.Scroll == nil then
+			ArchDB:BuildWindow();
+		else
+			ADB.frame:Hide();
+		end
+	end
 end
 
 function ArchDB:OnInitialize()
@@ -278,7 +447,38 @@ function ArchDB:OnInitialize()
 --	ADB.db.ResetDB();
 
 	ArchDB:RegisterSlashCommands();
+	
+	if ADB.db.global.minimap == nil then
+		ADB.db.global.minimap = { hide = false };
+	end
+
+	if LDB == nil then 
+		return;
+	end
+
+	ADB.broker = LDB:NewDataObject("ArchDB", {
+		type = "launcher",
+		icon = "Interface\\Icons\\TRADE_Archaeology_fossil_fern",
+		label = "ArchDB",
+		text = "ArchDB",
+		OnClick= function(self, button)
+			if button == "LeftButton" then
+				if ADB.Scroll == nil then
+					ArchDB:BuildWindow();
+				else
+					ADB.frame:Hide();
+				end
+			end
+		end,
+		OnTooltipShow = function(tip)
+			tip:AddLine("ArchDB");
+			tip:AddLine("Click to toggle window");
+		end,
+	});
+
+	LibIcon:Register(appName, ADB.broker, ADB.db.global.minimap);
 end
+
 
 function ArchDB:ArtifactHistoryReady()
 	if ADB.Scroll ~= nil then 
