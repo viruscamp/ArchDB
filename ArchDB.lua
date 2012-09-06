@@ -22,7 +22,7 @@ ADB.ArtifactList = {};
 ADB.ArtifactCnt = 0
 ADB.Scroll = nil
 
-ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V"};
+ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V", "", "P", "M"};
 
 ADB.ItemColors = {
 	"ff9d9d9d", -- gray (crappy) 
@@ -225,6 +225,25 @@ function ADB.PopulateWindow(key)
 	ADB.db.char.LastSelected = key;
 end
 
+function ArchDB:FirstSetup()
+	local raceCount = GetNumArchaeologyRaces() + 1; -- Add for All Races
+	local raceIndex;
+
+	ADB.Debug("First Setup to "..raceCount);
+	for raceIndex=1, raceCount do
+		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" then
+			ADB.Debug("Setup: "..raceIndex.." "..raceName);
+			ArchDB_ArtifactList_Setup(raceIndex, raceName);	
+			for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
+				ADB.Debug("GetItemInfo for "..itemid[1]);
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+			end
+		end
+	end
+end
+
+
 function ArchDB:BuildArtifacts(raceIndex)
 	local itemid;
 	local ret = true;
@@ -250,10 +269,15 @@ function ArchDB:BuildArtifacts(raceIndex)
 		end
 		if ArchDB_ArtifactList[startRace] ~= nil then
 			for _, itemid in pairs(ArchDB_ArtifactList[startRace]) do
-				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
+				ADB.Debug("GetItemInfo for "..itemid[1]);
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+				if itemRarity == nil then itemRarity = 0 end
+				itemName = GetSpellInfo(itemid[2]);
 				if itemName == nil then 
 					ret = false;
 				else
+					ADB.Debug("Insert: "..itemName);
+					ADB.Debug("Insert: "..itemName.." "..itemRarity);
 					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName }); 
 				end
 			end
@@ -282,10 +306,10 @@ function ArchDB:BuildData()
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
 		end
-		if raceName ~= nil and raceName ~= "Other" then 
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" then 
 			tinsert(ADB.Races, raceIndex, raceName);
 			if raceIndex < raceCount then -- Not All Races
-				ArchDB_ArtifactList_Setup(raceIndex, raceName);
+				--ArchDB_ArtifactList_Setup(raceIndex, raceName);
 			end
 			if ArchDB:BuildArtifacts(raceIndex) == false then
 				ret = false;
@@ -455,6 +479,7 @@ end
 
 
 function ArchDB:ArtifactHistoryReady()
+	ArchDB:FirstSetup();
 	if ADB.Scroll ~= nil then 
 		ADB.Group:ReleaseChildren();
 		ADB.PopulateWindow(ADB.db.char.LastSelected);
