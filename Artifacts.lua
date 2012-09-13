@@ -277,5 +277,9 @@ function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 		ADB_Pandaren(raceIndex);
 	elseif raceIndex == 12 then
 		ADB_Mogu(raceIndex);
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("ArchDB: Unknown Race Setup for "..raceName.." "..raceIndex);
+		return false;
 	end
+	return true;
 end

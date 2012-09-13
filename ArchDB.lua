@@ -141,6 +141,9 @@ function ADB.GetArtifactCounts(raceIndex)
 			if artifactName == "Mummified Monkey Paw" then
 				artifactName = "Crawling Claw"
 			end
+			if artifactName == "Vrykul Drinking Horn" then
+				artifactName = "Vrykyl Drinking Horn"
+			end
 			ADB.AddCount(raceIndex, artifactName, completionCount);
 			ADB.ArtifactCnt = ADB.ArtifactCnt + completionCount;
 		end
@@ -234,10 +237,12 @@ function ArchDB:FirstSetup()
 		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
 		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" then
 			ADB.Debug("Setup: "..raceIndex.." "..raceName);
-			ArchDB_ArtifactList_Setup(raceIndex, raceName);	
-			for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
-				ADB.Debug("GetItemInfo for "..itemid[1]);
-				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+			local check = ArchDB_ArtifactList_Setup(raceIndex, raceName);	
+			if check then
+				for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
+					ADB.Debug("GetItemInfo for "..itemid[1]);
+					local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+				end
 			end
 		end
 	end
@@ -276,8 +281,6 @@ function ArchDB:BuildArtifacts(raceIndex)
 				if itemName == nil then 
 					ret = false;
 				else
-					ADB.Debug("Insert: "..itemName);
-					ADB.Debug("Insert: "..itemName.." "..itemRarity);
 					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName }); 
 				end
 			end
