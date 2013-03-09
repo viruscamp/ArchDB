@@ -235,7 +235,7 @@ function ArchDB:FirstSetup()
 	ADB.Debug("First Setup to "..raceCount);
 	for raceIndex=1, raceCount do
 		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
-		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" then
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" and raceName ~= "UNUSED" then
 			ADB.Debug("Setup: "..raceIndex.." "..raceName);
 			local check = ArchDB_ArtifactList_Setup(raceIndex, raceName);	
 			if check then
@@ -309,7 +309,7 @@ function ArchDB:BuildData()
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
 		end
-		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" then 
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" and raceName ~= "UNUSED" then 
 			tinsert(ADB.Races, raceIndex, raceName);
 			if raceIndex < raceCount then -- Not All Races
 				--ArchDB_ArtifactList_Setup(raceIndex, raceName);

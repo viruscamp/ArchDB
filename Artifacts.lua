@@ -198,8 +198,8 @@ end
 
 local function ADB_Pandaren(raceIndex)
 ArchDB_ArtifactList[raceIndex] = { 
-{ 79907, 113981 }, -- Spear of Xuen
-{ 79906, 113980 }, -- Umbrella of Chi-Ji
+{ 89685, 113981 }, -- Spear of Xuen
+{ 89684, 113980 }, -- Umbrella of Chi-Ji
 
 { 79903, 113977 }, -- Apothecary Tins
 { 79901, 113975 }, -- Carved Bronze Mirror
@@ -232,6 +232,22 @@ ArchDB_ArtifactList[raceIndex] = {
 };
 end
 
+local function ADB_Mantid(raceIndex)
+ArchDB_ArtifactList[raceIndex] = { 
+-- First two item numbers don't exist in the PTR, so can't test yet
+{ 95392, 139787 }, -- Sonic Pulse Generator
+{ 95391, 139786 }, -- Mantid Sky Reaver
+{ 95382, 139785 }, -- Kypari Sap Container
+{ 95381, 139784 }, -- Pollen Collector
+{ 95380, 139783 }, -- Mantid Lamp
+{ 95379, 139782 }, -- Remains of a Paragon
+{ 95378, 139781 }, -- Inert Sound Beacon
+{ 95377, 139780 }, -- The Praying Mantid
+{ 95376, 139779 }, -- Ancient Sap Feeder
+{ 95375, 139776 }, -- Banner of the Mantid Empire
+};
+end
+
 function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 	if raceName == "Dwarf" then
 		ADB_Dwarf(raceIndex);
@@ -255,6 +271,8 @@ function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 		ADB_Pandaren(raceIndex);
 	elseif raceName == "Mogu" then
 		ADB_Mogu(raceIndex);
+	elseif raceName == "Mantid" then
+		ADB_Mantid(raceIndex);
 	elseif raceIndex == 1 then
 		ADB_Dwarf(raceIndex);
 	elseif raceIndex == 2 then
@@ -273,12 +291,14 @@ function ArchDB_ArtifactList_Setup(raceIndex, raceName)
 		ADB_Troll(raceIndex);
 	elseif raceIndex == 9 then
 		ADB_Vrykul(raceIndex);
+	elseif raceIndex == 10 then
+		ADB_Mantid(raceIndex);
 	elseif raceIndex == 11 then
 		ADB_Pandaren(raceIndex);
 	elseif raceIndex == 12 then
 		ADB_Mogu(raceIndex);
 	else
-		DEFAULT_CHAT_FRAME:AddMessage("ArchDB: Unknown Race Setup for "..raceName.." "..raceIndex);
+--		DEFAULT_CHAT_FRAME:AddMessage("ArchDB: Unknown Race Setup for "..raceName.." "..raceIndex);
 		return false;
 	end
 	return true;
