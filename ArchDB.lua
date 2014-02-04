@@ -22,7 +22,7 @@ ADB.ArtifactList = {};
 ADB.ArtifactCnt = 0
 ADB.Scroll = nil
 
-ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V"};
+ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V", "", "P", "M"};
 
 ADB.ItemColors = {
 	"ff9d9d9d", -- gray (crappy) 
@@ -81,8 +81,6 @@ function ArchDB:AddArtifact(frame, info)
 	local race = info[6];
 	local completedstr = "";
 	local racestr = "";
-	local numFrament = info[7];
-	local numKeyStone = info[8];
 
 	if ADB.db.char.ShowAll == true then
 		completedstr = " ("..completed..")";
@@ -90,51 +88,26 @@ function ArchDB:AddArtifact(frame, info)
 	if race ~= nil then
 		racestr = " ("..race..")";
 	end
-	
-	 local fargmentstr = "(F:"..numFrament.." K:"..numKeyStone..")"
 
-	local OnEnter = function ()
-		ShowUIPanel(GameTooltip)
+	local label = AceGUI:Create("InteractiveLabel");
+	label:SetText(string.format(ADB.IconFormat, icon).."|c"..ADB.ItemColors[itemRarity+1]..itemName..completedstr..racestr.."|r");
+	label:SetWidth(210);
+	label:SetCallback("OnEnter", function () ShowUIPanel(GameTooltip)
 		if IsControlKeyDown() == nil then
-			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-			GameTooltip:SetHyperlink(itemLink);
-			GameTooltip:Show()
-		end
-	end
-
-	local OnLeave = function ()
-		ShowUIPanel(GameTooltip)
-		GameTooltip:Hide()
-	end
-	
-	local OnClick = function (lbl) 
+		GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+		GameTooltip:SetHyperlink(itemLink);
+		GameTooltip:Show() end end);
+	label:SetCallback("OnLeave", function () ShowUIPanel(GameTooltip)
+		GameTooltip:Hide() end);
+	label:SetUserData("link", itemLink);
+	label:SetCallback("OnClick", function (lbl) 
 		if(IsShiftKeyDown() and ChatEdit_GetLastActiveWindow():IsVisible()) then
 			ChatEdit_InsertLink(lbl:GetUserData("link"));
 		end
-	end
-	
-	local label = AceGUI:Create("InteractiveLabel");
-	label:SetText(string.format(ADB.IconFormat, icon));
-	label:SetWidth(30);
-	label:SetCallback("OnEnter", OnEnter);
-	label:SetCallback("OnLeave", OnLeave);
-	label:SetUserData("link", itemLink);
-	label:SetCallback("OnClick", OnClick);
-	
-	local textLabel = AceGUI:Create("InteractiveLabel");
-	textLabel:SetText("|c"..ADB.ItemColors[itemRarity+1]..itemName.."\n"..fargmentstr..completedstr..racestr.."|r");
-	textLabel:SetCallback("OnEnter", OnEnter);
-	textLabel:SetCallback("OnLeave", OnLeave);
-	textLabel:SetUserData("link", itemLink);
-	textLabel:SetCallback("OnClick", OnClick);
-	
-	local group = AceGUI:Create("SimpleGroup");
-	group:SetLayout("Flow");
-	--group:SetWidth(250);
-	group:AddChild(label);
-	group:AddChild(textLabel);
 
-	frame:AddChild(group);
+	end);
+
+	frame:AddChild(label);
 
 end
 
@@ -159,6 +132,7 @@ function ADB.GetArtifactCounts(raceIndex)
 	end
 
 	ADB.Debug("Start to end: "..startRace..", "..endRace);
+	local ArchDB_DifferentNameList = ArchDB_DifferentNameList;
 	for startRace = startRace, endRace do
 		local artifactCount = GetNumArtifactsByRace(startRace);
 		if artifactCount == nil then return end
@@ -250,6 +224,27 @@ function ADB.PopulateWindow(key)
 	ADB.db.char.LastSelected = key;
 end
 
+function ArchDB:FirstSetup()
+	local raceCount = GetNumArchaeologyRaces() + 1; -- Add for All Races
+	local raceIndex;
+
+	ADB.Debug("First Setup to "..raceCount);
+	for raceIndex=1, raceCount do
+		local raceName, raceTexture, raceItemID, raceCurrency = GetArchaeologyRaceInfo(raceIndex);
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" and raceName ~= "UNUSED" then
+			ADB.Debug("Setup: "..raceIndex.." "..raceName);
+			local check = ArchDB_ArtifactList_Setup(raceIndex, raceName);	
+			if check then
+				for _, itemid in pairs(ArchDB_ArtifactList[raceIndex]) do
+					ADB.Debug("GetItemInfo for "..itemid[1]);
+					local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+				end
+			end
+		end
+	end
+end
+
+
 function ArchDB:BuildArtifacts(raceIndex)
 	local itemid;
 	local ret = true;
@@ -274,13 +269,15 @@ function ArchDB:BuildArtifacts(raceIndex)
 			raceName = ADB.ShortRace[startRace];
 		end
 		if ArchDB_ArtifactList[startRace] ~= nil then
-			for _, artifactItem in pairs(ArchDB_ArtifactList[startRace]) do
-				local itemid, numFrament, numKeyStone = artifactItem[1], artifactItem[2], artifactItem[3]
-				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
+			for _, itemid in pairs(ArchDB_ArtifactList[startRace]) do
+				ADB.Debug("GetItemInfo for "..itemid[1]);
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+				if itemRarity == nil then itemRarity = 0 end
+				itemName = GetSpellInfo(itemid[2]);
 				if itemName == nil then 
 					ret = false;
 				else
-					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName, numFrament, numKeyStone }); 
+					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName }); 
 				end
 			end
 		end
@@ -308,10 +305,10 @@ function ArchDB:BuildData()
 			ADB.Debug("No race name for race id "..raceIndex);
 			ret = false;
 		end
-		if raceName ~= nil and raceName ~= "Other" then 
+		if raceName ~= nil and raceName ~= "Other" and raceName ~= "UNKNOWN" and raceName ~= "UNUSED" then 
 			tinsert(ADB.Races, raceIndex, raceName);
 			if raceIndex < raceCount then -- Not All Races
-				ArchDB_ArtifactList_Setup(raceIndex, raceName);
+				--ArchDB_ArtifactList_Setup(raceIndex, raceName);
 			end
 			if ArchDB:BuildArtifacts(raceIndex) == false then
 				ret = false;
@@ -481,6 +478,7 @@ end
 
 
 function ArchDB:ArtifactHistoryReady()
+	ArchDB:FirstSetup();
 	if ADB.Scroll ~= nil then 
 		ADB.Group:ReleaseChildren();
 		ADB.PopulateWindow(ADB.db.char.LastSelected);
