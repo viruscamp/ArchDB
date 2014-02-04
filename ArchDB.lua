@@ -22,7 +22,7 @@ ADB.ArtifactList = {};
 ADB.ArtifactCnt = 0
 ADB.Scroll = nil
 
-ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V", "", "P", "M"};
+ADB.ShortRace = {"DW", "DR", "F", "NE", "NB", "O", "TV", "TR", "V", "MT", "P", "M"};
 
 ADB.ItemColors = {
 	"ff9d9d9d", -- gray (crappy) 
@@ -81,6 +81,8 @@ function ArchDB:AddArtifact(frame, info)
 	local race = info[6];
 	local completedstr = "";
 	local racestr = "";
+	local numFrament = info[7];
+	local numKeyStone = info[8];
 
 	if ADB.db.char.ShowAll == true then
 		completedstr = " ("..completed..")";
@@ -88,27 +90,50 @@ function ArchDB:AddArtifact(frame, info)
 	if race ~= nil then
 		racestr = " ("..race..")";
 	end
+	
+	local fargmentstr = "(F:"..numFrament.." K:"..numKeyStone..")"
 
-	local label = AceGUI:Create("InteractiveLabel");
-	label:SetText(string.format(ADB.IconFormat, icon).."|c"..ADB.ItemColors[itemRarity+1]..itemName..completedstr..racestr.."|r");
-	label:SetWidth(210);
-	label:SetCallback("OnEnter", function () ShowUIPanel(GameTooltip)
+	local OnEnter = function ()
+		ShowUIPanel(GameTooltip)
 		if IsControlKeyDown() == nil then
-		GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-		GameTooltip:SetHyperlink(itemLink);
-		GameTooltip:Show() end end);
-	label:SetCallback("OnLeave", function () ShowUIPanel(GameTooltip)
-		GameTooltip:Hide() end);
-	label:SetUserData("link", itemLink);
-	label:SetCallback("OnClick", function (lbl) 
+			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+			GameTooltip:SetHyperlink(itemLink);
+			GameTooltip:Show()
+		end
+	end
+
+	local OnLeave = function ()
+		ShowUIPanel(GameTooltip)
+		GameTooltip:Hide()
+	end
+	
+	local OnClick = function (lbl) 
 		if(IsShiftKeyDown() and ChatEdit_GetLastActiveWindow():IsVisible()) then
 			ChatEdit_InsertLink(lbl:GetUserData("link"));
 		end
+	end
 
-	end);
+	local label = AceGUI:Create("InteractiveLabel");
+	label:SetText(string.format(ADB.IconFormat, icon));
+	label:SetWidth(30);
+	label:SetCallback("OnEnter", OnEnter);
+	label:SetCallback("OnLeave", OnLeave);
+	label:SetUserData("link", itemLink);
+	label:SetCallback("OnClick", OnClick);	
+	
+	local textLabel = AceGUI:Create("InteractiveLabel");
+	textLabel:SetText("|c"..ADB.ItemColors[itemRarity+1]..itemName.."\n"..fargmentstr..completedstr..racestr.."|r");
+	textLabel:SetCallback("OnEnter", OnEnter);
+	textLabel:SetCallback("OnLeave", OnLeave);
+	textLabel:SetUserData("link", itemLink);
+	textLabel:SetCallback("OnClick", OnClick);
+	
+	local group = AceGUI:Create("SimpleGroup");
+	group:SetLayout("Flow");
+	group:AddChild(label);
+	group:AddChild(textLabel);
 
-	frame:AddChild(label);
-
+	frame:AddChild(group);
 end
 
 function ADB.AddCount(raceIndex, name, cnt)
@@ -246,7 +271,7 @@ end
 
 
 function ArchDB:BuildArtifacts(raceIndex)
-	local itemid;
+	local itemid, artifactItem;
 	local ret = true;
 	local startRace = raceIndex;
 	local endRace = raceIndex;
@@ -269,15 +294,16 @@ function ArchDB:BuildArtifacts(raceIndex)
 			raceName = ADB.ShortRace[startRace];
 		end
 		if ArchDB_ArtifactList[startRace] ~= nil then
-			for _, itemid in pairs(ArchDB_ArtifactList[startRace]) do
-				ADB.Debug("GetItemInfo for "..itemid[1]);
-				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid[1]);
+			for _, artifactItem in pairs(ArchDB_ArtifactList[startRace]) do
+				ADB.Debug("GetItemInfo for "..artifactItem[1]);
+				local itemid, numFrament, numKeyStone = artifactItem[1], artifactItem[3] or 0, artifactItem[4] or 0;
+				local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, itemTexture, itemSellPrice = GetItemInfo(itemid);
 				if itemRarity == nil then itemRarity = 0 end
-				itemName = GetSpellInfo(itemid[2]);
+				itemName = GetSpellInfo(artifactItem[2]);
 				if itemName == nil then 
 					ret = false;
 				else
-					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName }); 
+					table.insert(ADB.ArtifactList[raceIndex], 1, { itemName, itemLink, itemRarity, itemTexture, 0, raceName, numFrament, numKeyStone }); 
 				end
 			end
 		end
